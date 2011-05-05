@@ -88,6 +88,7 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
             
                 self.cpt[k][label] = util.Counter()
                 for feature in self.features:
+                    self.cpt[k][label][feature] = util.Counter()
                     if self.count[label] == 0 or self.count[label][feature] == -1:
               
                         i = 0
@@ -114,10 +115,11 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
                         else:
                             totalCount = self.totalCount[label]
                     prob = (count + k + 0.0) / (totalCount + k * numFeatures)
-                    self.cpt[k][label][feature] = prob
+                    self.cpt[k][label][feature]["positive"] = prob
+                    self.cpt[k][label][feature]["negative"] = 1-prob
         
         #Evaluate Accuracy        
-        bestK = None
+        bestK = kgrid[0]
         bestAccuracy = 0
         numData = len(validationData)
         for k in kgrid:
@@ -170,7 +172,13 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
             sum = 0
             for feature in self.features:
                 if datum[feature] != 0:
-                    sum = sum + math.log(self.cpt[self.bestK][label][feature])
+                    if self.cpt[self.bestK][label][feature]==0:
+                        raise NameError("positive broke: "+label+" "+feature)
+                    sum = sum + math.log(self.cpt[self.bestK][label][feature]["positive"])
+                else:
+                    if self.cpt[self.bestK][label][feature]==0:
+                        raise NameError("negative broke: "+label+" "+feature)
+                    sum = sum + math.log(self.cpt[self.bestK][label][feature]["negative"])
             logJoint[label] = math.log(prior) + sum
         return logJoint
 
@@ -188,7 +196,7 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
         "*** YOUR CODE HERE ***"
         
         for feature in self.features:
-            odds[feature]=self.cpt[self.bestK][label1][feature]/(0.0+self.cpt[self.bestK][label2][feature])
+            odds[feature]=self.cpt[self.bestK][label1][feature]["positive"]/(0.0+self.cpt[self.bestK][label2][feature]["positive"])
         featuresOdds=odds.sortedKeys()
         del featuresOdds[100:]
         return featuresOdds
